@@ -31,19 +31,6 @@
 
 #define MAX_EPSILON_ERROR 5.0f
 
-bool g_isJuliaSet = false ;
-bool g_isMoving = true ;
-bool g_runCPU = false ;
-
-FILE *stream ;
-char g_ExecPath[300] ;
-
-// Set to 1 to run on the CPU instead of the GPU for timing comparison.
-#define RUN_CPU 0
-
-// Set to 1 to time frame generation
-#define RUN_TIMING 0
-
 // Random number macros
 #define RANDOMSEED(seed) ((seed) = ((seed) * 1103515245 + 12345))
 #define RANDOMBITS(seed, bits) ((unsigned int)RANDOMSEED(seed) >> (32 - (bits)))
@@ -61,31 +48,9 @@ uchar4 *d_dst = NULL;
 //Original image width and height
 int imageW = 800, imageH = 600;
 
-// Starting iteration limit
-int crunch = 512;
-
-// Starting position and scale
-double xOff = -0.5;
-double yOff = 0.0;
-double scale = 3.2;
-
-// Starting stationary position and scale motion
-double xdOff = 0.0;
-double ydOff = 0.0;
-double dscale = 1.0;
-
-// Julia parameter
-double xJParam = 0.0 ;
-double yJParam = 0.0 ;
-
-// Precision mode
-// 0=single precision, 1=double single, 2=double
-int precisionMode = 0;
-
 // Starting animation frame and anti-aliasing pass
 int animationFrame = 0;
 int animationStep = 0;
-int pass = 0;
 
 // Starting color multipliers and random seed
 int colorSeed = 0;
@@ -115,11 +80,7 @@ unsigned int g_TotalErrors = 0;
 int *pArgc = NULL;
 char **pArgv = NULL;
 
-const char *sSDKsample = "CUDA Mandelbrot/Julia Set";
-
-#define MAX_EPSILON 50
 #define REFRESH_DELAY     10 //ms
-
 
 #ifndef MAX
 #define MAX(a,b) ((a > b) ? a : b)
@@ -149,7 +110,7 @@ void computeFPS()
     {
         char fps[256];
         float ifps = 1.f / (sdkGetAverageTimerValue(&hTimer) / 1000.f);
-        sprintf(fps, "<CUDA %s Set> %3.1f fps", g_isJuliaSet ? "Julia" : "Mandelbrot", ifps);
+        sprintf(fps, "Raycasting: %f fps", ifps);
         glutSetWindowTitle(fps);
         fpsCount = 0;
 
@@ -158,176 +119,20 @@ void computeFPS()
     }
 }
 
-void startJulia(const char *path)
+void renderImage()
 {
-    g_isJuliaSet = true ;
-    g_isMoving = false ;
+	sdkResetTimer(&hTimer);
 
-    if ((path == NULL) || (stream = fopen(path, "r")) == NULL)
-    {
-        printf("JuliaSet: params.txt could not be opened.  Using default parameters\n");
-        xOff = -0.085760 ;
-        yOff =  0.007040 ;
-        scale = 3.200000 ;
-        xJParam = -0.172400 ;
-        yJParam = -0.652693 ;
-    }
-    else
-    {
-        fseek(stream, 0L, SEEK_SET);
-        fscanf(stream, "%lf %lf %lf %lf %lf", &xOff, &yOff, &scale, &xJParam, &yJParam);
-        fclose(stream);
-    }
+	checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
+	size_t num_bytes;
+	checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
 
-    xdOff = 0.0;
-    ydOff = 0.0;
-    dscale = 1.0;
-    pass = 0 ;
-}
+	double x = (double)imageW;
+	double y = (double)imageH;
 
-// Get a sub-pixel sample location
-void GetSample(int sampleIndex, float &x, float &y)
-{
-    static const unsigned char pairData[128][2] =
-    {
-        { 64,  64}, {  0,   0}, {  1,  63}, { 63,   1}, { 96,  32}, { 97,  95}, { 36,  96}, { 30,  31},
-        { 95, 127}, {  4,  97}, { 33,  62}, { 62,  33}, { 31, 126}, { 67,  99}, { 99,  65}, {  2,  34},
-        { 81,  49}, { 19,  80}, {113,  17}, {112, 112}, { 80,  16}, {115,  81}, { 46,  15}, { 82,  79},
-        { 48,  78}, { 16,  14}, { 49, 113}, {114,  48}, { 45,  45}, { 18,  47}, { 20, 109}, { 79, 115},
-        { 65,  82}, { 52,  94}, { 15, 124}, { 94, 111}, { 61,  18}, { 47,  30}, { 83, 100}, { 98,  50},
-        {110,   2}, {117,  98}, { 50,  59}, { 77,  35}, {  3, 114}, {  5,  77}, { 17,  66}, { 32,  13},
-        {127,  20}, { 34,  76}, { 35, 110}, {100,  12}, {116,  67}, { 66,  46}, { 14,  28}, { 23,  93},
-        {102,  83}, { 86,  61}, { 44, 125}, { 76,   3}, {109,  36}, {  6,  51}, { 75,  89}, { 91,  21},
-        { 60, 117}, { 29,  43}, {119,  29}, { 74,  70}, {126,  87}, { 93,  75}, { 71,  24}, {106, 102},
-        {108,  58}, { 89,   9}, {103,  23}, { 72,  56}, {120,   8}, { 88,  40}, { 11,  88}, {104, 120},
-        { 57, 105}, {118, 122}, { 53,   6}, {125,  44}, { 43,  68}, { 58,  73}, { 24,  22}, { 22,   5},
-        { 40,  86}, {122, 108}, { 87,  90}, { 56,  42}, { 70, 121}, {  8,   7}, { 37,  52}, { 25,  55},
-        { 69,  11}, { 10, 106}, { 12,  38}, { 26,  69}, { 27, 116}, { 38,  25}, { 59,  54}, {107,  72},
-        {121,  57}, { 39,  37}, { 73, 107}, { 85, 123}, { 28, 103}, {123,  74}, { 55,  85}, {101,  41},
-        { 42, 104}, { 84,  27}, {111,  91}, {  9,  19}, { 21,  39}, { 90,  53}, { 41,  60}, { 54,  26},
-        { 92, 119}, { 51,  71}, {124, 101}, { 68,  92}, { 78,  10}, { 13, 118}, {  7,  84}, {105,   4}
-    };
+	RunMandelbrot1(d_dst, imageW, imageH, crunch, x, y, xJParam, yJParam, s, colors, pass++, animationFrame, precisionMode, numSMs, g_isJuliaSet, version);
 
-    x = (1.0f / 128.0f) * (0.5f + (float)pairData[sampleIndex][0]);
-    y = (1.0f / 128.0f) * (0.5f + (float)pairData[sampleIndex][1]);
-} // GetSample
-
-
-// render Mandelbrot image using CUDA or CPU
-void renderImage(bool bUseOpenGL, bool fp64, int mode)
-{
-#if RUN_TIMING
-    pass = 0;
-#endif
-
-    if (pass < 128)
-    {
-        if (g_runCPU)
-        {
-            int startPass = pass;
-            float xs, ys;
-            sdkResetTimer(&hTimer);
-
-            if (bUseOpenGL)
-            {
-                // DEPRECATED: checkCudaErrors(cudaGLMapBufferObject((void**)&d_dst, gl_PBO));
-                checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
-                size_t num_bytes;
-                checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
-            }
-
-            // Get the anti-alias sub-pixel sample location
-            GetSample(pass & 127, xs, ys);
-
-            // Get the pixel scale and offset
-            double s = scale / (double)imageW;
-            double x = (xs - (double)imageW * 0.5f) * s + xOff;
-            double y = (ys - (double)imageH * 0.5f) * s + yOff;
-
-            // Run the mandelbrot generator
-            if (pass && !startPass)   // Use the adaptive sampling version when animating.
-            {
-                if (precisionMode)
-                    RunMandelbrotDSGold1(h_Src, imageW, imageH, crunch, x, y,
-                                         xJParam, yJParam, s, colors, pass++, animationFrame, g_isJuliaSet);
-                else
-                    RunMandelbrotGold1(h_Src, imageW, imageH, crunch, (float)x, (float)y,
-                                       (float)xJParam, (float)yJParam, (float)s, colors, pass++, animationFrame, g_isJuliaSet);
-            }
-            else
-            {
-                if (precisionMode)
-                    RunMandelbrotDSGold0(h_Src, imageW, imageH, crunch, x, y,
-                                         xJParam, yJParam, s, colors, pass++, animationFrame, g_isJuliaSet);
-                else
-                    RunMandelbrotGold0(h_Src, imageW, imageH, crunch, (float)x, (float)y,
-                                       (float)xJParam, (float)yJParam, (float)s, colors, pass++, animationFrame, g_isJuliaSet);
-            }
-
-            checkCudaErrors(cudaMemcpy(d_dst, h_Src, imageW * imageH * sizeof(uchar4), cudaMemcpyHostToDevice));
-
-            if (bUseOpenGL)
-            {
-                // DEPRECATED: checkCudaErrors(cudaGLUnmapBufferObject(gl_PBO));
-                checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
-            }
-
-#if RUN_TIMING
-            printf("CPU = %5.8f\n", 0.001f * sdkGetTimerValue(&hTimer));
-#endif
-        }
-        else // this is the GPU Path
-        {
-            float timeEstimate;
-            int startPass = pass;
-            sdkResetTimer(&hTimer);
-
-            if (bUseOpenGL)
-            {
-                // DEPRECATED: checkCudaErrors(cudaGLMapBufferObject((void**)&d_dst, gl_PBO));
-                checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
-                size_t num_bytes;
-                checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
-            }
-
-            // Render anti-aliasing passes until we run out time (60fps approximately)
-            do
-            {
-                float xs, ys;
-
-                // Get the anti-alias sub-pixel sample location
-                GetSample(pass & 127, xs, ys);
-
-                // Get the pixel scale and offset
-                double s = scale / (float)imageW;
-                double x = (xs - (double)imageW * 0.5f) * s + xOff;
-                double y = (ys - (double)imageH * 0.5f) * s + yOff;
-
-
-                // Run the mandelbrot generator
-                if (pass && !startPass) // Use the adaptive sampling version when animating.
-                    RunMandelbrot1(d_dst, imageW, imageH, crunch, x, y,
-                                   xJParam, yJParam, s, colors, pass++, animationFrame, precisionMode, numSMs, g_isJuliaSet, version);
-                else
-                    RunMandelbrot0(d_dst, imageW, imageH, crunch, x, y,
-                                   xJParam, yJParam, s, colors, pass++, animationFrame, precisionMode, numSMs, g_isJuliaSet, version);
-
-                // Estimate the total time of the frame if one more pass is rendered
-                timeEstimate = 0.1f * sdkGetTimerValue(&hTimer) * ((float)(pass + 1 - startPass) / (float)(pass - startPass));
-            }
-            while ((pass < 128) && (timeEstimate < 1.0f / 60.0f) && !RUN_TIMING);
-
-            if (bUseOpenGL)
-            {
-                // DEPRECATED: checkCudaErrors(cudaGLUnmapBufferObject(gl_PBO));
-                checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
-            }
-
-#if RUN_TIMING
-            printf("GPU = %5.8f\n", 0.001f * sdkGetTimerValue(&hTimer);
-#endif
-        }
-    }
+	checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 }
 
 // OpenGL display function
@@ -335,42 +140,12 @@ void displayFunc(void)
 {
     sdkStartTimer(&hTimer);
 
-    if ((xdOff != 0.0) || (ydOff != 0.0))
-    {
-        if (g_isMoving || !g_isJuliaSet)
-        {
-            xOff += xdOff;
-            yOff += ydOff;
-        }
-        else
-        {
-            xJParam += xdOff ;
-            yJParam += ydOff ;
-        }
-
-        pass = 0;
-    }
-
-    if (dscale != 1.0)
-    {
-        scale *= dscale;
-        pass = 0;
-    }
-
-    if (animationStep)
-    {
-        animationFrame -= animationStep;
-        pass = 0;
-    }
-
     // render the Mandelbrot image
-    renderImage(true, g_isJuliaSet, precisionMode);
+    renderImage();
 
     // load texture from PBO
-    //  glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, gl_PBO);
     glBindTexture(GL_TEXTURE_2D, gl_Tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA, GL_UNSIGNED_BYTE, BUFFER_DATA(0));
-    //  glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
     // fragment program is required to display floating point texture
     glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, gl_Shader);
