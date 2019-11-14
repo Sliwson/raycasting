@@ -3,6 +3,30 @@
 #include <tuple>
 
 template<class T>
+class Matrix4
+{
+public:
+	Matrix4 = default();
+
+	const T* operator [] (int i) const { return M[i]; }
+	T* operator [] (int i) { return M[i]; }
+
+	Matrix<T> operator* (const Matrix4<T> rhs) const
+	{
+		Matrix4 result;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				result[i][j] = M[i][0] * rhs[0][j] + M[i][1] * rhs[1][j] + M[i][2] * rhs[2][j] + M[i][3] * rhs[3][j];
+
+		return result;
+	}
+
+private:
+
+	T M[4][4] = { {1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1} };
+};
+
+template<class T>
 class Point3
 {
 public:
@@ -23,8 +47,8 @@ public:
 	constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
 	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
-	constexpr T Length() { return std::sqrt(x * x + y * y + z * z); }
-	constexpr static T Dot(Vector3<T> a, Vector3<T> b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
+	constexpr static T Dot(Vector3<T> a, Vector3<T> b) const { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 	constexpr Vector3<T> operator* (T scalar) { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
 	constexpr Vector3<T> operator/ (T scalar) { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
@@ -64,7 +88,7 @@ public:
 	Sphere() = default;
 	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
 
-	std::tuple<bool, Point3<T>, Point3<T>> Intersect(Ray<T> ray)
+	std::tuple<bool, Point3<T>, Point3<T>> Intersect(Ray<T> ray) const
 	{
 		const auto L = Vector3<T>(C - ray.O);
 		auto tCa = Vector3<T>::Dot(L, ray.D);
