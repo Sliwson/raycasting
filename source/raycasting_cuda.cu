@@ -16,8 +16,8 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 
 	if (x < imageW && y < imageH)
 	{
-		dst[pixel].x = 0;
-		dst[pixel].y = 255;
+		dst[pixel].x = (int)((float)x / imageW * 255);
+		dst[pixel].y = (int)((float)y / imageH * 255);
 		dst[pixel].z = 0;
 	}
 } 
