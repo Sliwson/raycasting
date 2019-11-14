@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Geometry.h" />
+    <ClInclude Include="Raycaster.h" />
     <ClInclude Include="source\raycasting_kernel.h" />
     <ClInclude Include="source\raycasting_kernel.cuh" />
   </ItemGroup>
