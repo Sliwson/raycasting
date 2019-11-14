@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "Geometry.h"
 #include "helper_cuda.h"
 #include "raycasting_kernel.h"
 #include "raycasting_kernel.cuh"
@@ -16,6 +17,13 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 
 	if (x < imageW && y < imageH)
 	{
+		//calculate camera
+		float aspectRatio = (float)imageW / imageH;
+		float fov = PI / 2;
+		float fovTan = tan(fov * PI / 360);
+		float pixelX = (2 * (((float)x + 0.5) / imageW) - 1) * fovTan * aspectRatio;
+		float pixelY = (1 - 2 * ((float)y + 0.5) / imageH) * fovTan;
+
 		dst[pixel].x = (int)((float)x / imageW * 255);
 		dst[pixel].y = (int)((float)y / imageH * 255);
 		dst[pixel].z = 0;

@@ -366,6 +366,15 @@ void initGL(int *argc, char **argv)
     printf("OpenGL window created.\n");
 }
 
+void geometry_test()
+{
+	auto sphere = Sphere<float>(Point3<float>(0, 0, 0), 9.f);
+	auto direction = Vector3<float>(2, 1, 0);
+	direction.Normalize();
+	auto ray = Ray<float>(Point3<float>(-10, 0, 0), direction);
+	auto intersection = sphere.Intersect(ray);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main program
 ////////////////////////////////////////////////////////////////////////////////
@@ -382,6 +391,8 @@ int main(int argc, char **argv)
 
     printf("Press [q] to exit\n");
     printf("\n");
+
+	geometry_test();
 
 #if defined (__APPLE__) || defined(MACOSX)
     atexit(cleanup);

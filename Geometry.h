@@ -2,6 +2,8 @@
 #include <cmath>
 #include <tuple>
 
+constexpr auto PI = 3.14159265358979323846f;
+
 template<class T>
 class Matrix4
 {
