@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cstdio>
+#include <chrono>
 
 #include "raycasting_kernel.h"
 
@@ -47,15 +48,17 @@ bool leftClicked = false;
 bool middleClicked = false;
 bool rightClicked = false;
 
-#define REFRESH_DELAY     10 //ms
+#define REFRESH_DELAY 2 //ms
 #define BUFFER_DATA(i) ((char *)0 + i)
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 // This is specifically to enable the application to enable/disable vsync
 typedef BOOL (WINAPI *PFNWGLSWAPINTERVALFARPROC)(int);
 
+int vSyncInterval = 0;
 void setVSync(int interval)
 {
+	printf("Setting vsync to %d\n", interval);
     if (WGL_EXT_swap_control)
     {
         wglSwapIntervalEXT = (PFNWGLSWAPINTERVALFARPROC)wglGetProcAddress("wglSwapIntervalEXT");
@@ -66,7 +69,21 @@ void setVSync(int interval)
 
 void computeFPS()
 {
+	static int fpsCounter = 0;
+	static auto timer = std::chrono::high_resolution_clock::now();
+	
+	fpsCounter++;
 
+	const auto milisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - timer).count();
+	if (milisecondsElapsed > 1000)
+	{
+		char title[256];
+		sprintf(title, "Raycasting (%d fps)", fpsCounter);
+		glutSetWindowTitle(title);
+
+		fpsCounter = 0;
+		timer = std::chrono::high_resolution_clock::now();
+	}
 }
 
 void renderImage()
@@ -166,6 +183,12 @@ void keyboardFunc(unsigned char k, int, int)
 
         case '-':
             break;
+
+		case 'V':
+		case 'v':
+			vSyncInterval = (vSyncInterval + 1) % 2;
+			setVSync(vSyncInterval);
+			break;
 
         default:
             break;
@@ -330,6 +353,7 @@ void initGL(int *argc, char **argv)
     glutMotionFunc(motionFunc);
     glutReshapeFunc(reshapeFunc);
     glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
+	glutSetWindowTitle("Raycasting (0 fps)");
 
     if (!isGLVersionSupported(1,5) ||
         !areGLExtensionsSupported("GL_ARB_vertex_buffer_object GL_ARB_pixel_buffer_object"))
@@ -365,7 +389,7 @@ int main(int argc, char **argv)
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-    setVSync(0);
+    setVSync(vSyncInterval);
 #endif
 
     glutMainLoop();
