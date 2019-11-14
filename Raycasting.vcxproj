@@ -20,6 +20,7 @@
     <CudaCompile Include="source\raycasting_cuda.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Geometry.h" />
     <ClInclude Include="source\raycasting_kernel.h" />
     <ClInclude Include="source\raycasting_kernel.cuh" />
   </ItemGroup>

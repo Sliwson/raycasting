@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <chrono>
 
+#include "Geometry.h"
 #include "raycasting_kernel.h"
 
 //OpenGL PBO and texture "names"
