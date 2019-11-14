@@ -188,8 +188,6 @@ void cleanup()
     glDeleteProgramsARB(1, &gl_Shader);
 }
 
-void initMenus() ;
-
 // OpenGL keyboard function
 void keyboardFunc(unsigned char k, int, int)
 {
@@ -406,7 +404,6 @@ void initGL(int *argc, char **argv)
     glutMotionFunc(motionFunc);
     glutReshapeFunc(reshapeFunc);
     glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
-    initMenus();
 
     if (!isGLVersionSupported(1,5) ||
         !areGLExtensionsSupported("GL_ARB_vertex_buffer_object GL_ARB_pixel_buffer_object"))

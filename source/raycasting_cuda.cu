@@ -14,7 +14,7 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 } 
 
 
-void RenderImage(uchar4 *dst, const int imageW, const int imageH)
+void RenderScene(uchar4 *dst, const int imageW, const int imageH)
 {
     dim3 threads(blockX, blockY);
     dim3 grid(iDivUp(imageW, blockX), iDivUp(imageH, blockY));

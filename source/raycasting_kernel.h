@@ -3,5 +3,5 @@
 
 #include <vector_types.h>
 
-extern "C" void RenderImage(uchar4 *dst, const int imageW, const int imageH);
+extern "C" void RenderScene(uchar4 *dst, const int imageW, const int imageH);
 #endif
