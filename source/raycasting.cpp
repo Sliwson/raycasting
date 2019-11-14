@@ -14,10 +14,8 @@
 #endif
 
 // CUDA runtime
-// CUDA utilities and system includes
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
-
 #include <helper_functions.h>
 #include <helper_cuda.h>
 
@@ -28,12 +26,6 @@
 #include <cstdio>
 
 #include "raycasting_kernel.h"
-
-#define MAX_EPSILON_ERROR 5.0f
-
-// Random number macros
-#define RANDOMSEED(seed) ((seed) = ((seed) * 1103515245 + 12345))
-#define RANDOMBITS(seed, bits) ((unsigned int)RANDOMSEED(seed) >> (32 - (bits)))
 
 //OpenGL PBO and texture "names"
 GLuint gl_PBO, gl_Tex, gl_Shader;
@@ -48,17 +40,6 @@ uchar4 *d_dst = NULL;
 //Original image width and height
 int imageW = 800, imageH = 600;
 
-// Starting animation frame and anti-aliasing pass
-int animationFrame = 0;
-int animationStep = 0;
-
-// Starting color multipliers and random seed
-int colorSeed = 0;
-uchar4 colors;
-
-// Timer ID
-StopWatchInterface *hTimer = NULL;
-
 // User interface variables
 int lastx = 0;
 int lasty = 0;
@@ -66,25 +47,7 @@ bool leftClicked = false;
 bool middleClicked = false;
 bool rightClicked = false;
 
-bool haveDoubles = true;
-int numSMs = 0;          // number of multiprocessors
-int version = 1;             // Compute Capability
-
-// Auto-Verification Code
-const int frameCheckNumber = 60;
-int fpsCount = 0;        // FPS count for averaging
-int fpsLimit = 15;       // FPS limit for sampling
-unsigned int frameCount = 0;
-unsigned int g_TotalErrors = 0;
-
-int *pArgc = NULL;
-char **pArgv = NULL;
-
 #define REFRESH_DELAY     10 //ms
-
-#ifndef MAX
-#define MAX(a,b) ((a > b) ? a : b)
-#endif
 #define BUFFER_DATA(i) ((char *)0 + i)
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -103,26 +66,11 @@ void setVSync(int interval)
 
 void computeFPS()
 {
-    frameCount++;
-    fpsCount++;
 
-    if (fpsCount == fpsLimit)
-    {
-        char fps[256];
-        float ifps = 1.f / (sdkGetAverageTimerValue(&hTimer) / 1000.f);
-        sprintf(fps, "Raycasting: %f fps", ifps);
-        glutSetWindowTitle(fps);
-        fpsCount = 0;
-
-        fpsLimit = MAX(1.f, (float)ifps);
-        sdkResetTimer(&hTimer);
-    }
 }
 
 void renderImage()
 {
-	sdkResetTimer(&hTimer);
-
 	checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
 	size_t num_bytes;
 	checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
@@ -135,9 +83,6 @@ void renderImage()
 // OpenGL display function
 void displayFunc(void)
 {
-    sdkStartTimer(&hTimer);
-
-    // render the Mandelbrot image
     renderImage();
 
     // load texture from PBO
@@ -163,11 +108,10 @@ void displayFunc(void)
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_FRAGMENT_PROGRAM_ARB);
 
-    sdkStopTimer(&hTimer);
     glutSwapBuffers();
 
     computeFPS();
-} // displayFunc
+}
 
 void cleanup()
 {
@@ -176,9 +120,6 @@ void cleanup()
         free(h_Src);
         h_Src = 0;
     }
-
-    sdkStopTimer(&hTimer);
-    sdkDeleteTimer(&hTimer);
 
     checkCudaErrors(cudaGraphicsUnregisterResource(cuda_pbo_resource));
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
@@ -191,8 +132,6 @@ void cleanup()
 // OpenGL keyboard function
 void keyboardFunc(unsigned char k, int, int)
 {
-    int seed;
-
     switch (k)
     {
         case '\033':
@@ -237,19 +176,13 @@ void keyboardFunc(unsigned char k, int, int)
 void clickFunc(int button, int state, int x, int y)
 {
     if (button == 0)
-    {
         leftClicked = !leftClicked;
-    }
 
     if (button == 1)
-    {
         middleClicked = !middleClicked;
-    }
 
     if (button == 2)
-    {
         rightClicked = !rightClicked;
-    }
 
     int modifiers = glutGetModifiers();
 
@@ -329,7 +262,6 @@ void initOpenGLBuffers(int w, int h)
 
     if (gl_PBO)
     {
-        //DEPRECATED: checkCudaErrors(cudaGLUnregisterBufferObject(gl_PBO));
         cudaGraphicsUnregisterResource(cuda_pbo_resource);
         glDeleteBuffers(1, &gl_PBO);
         gl_PBO = 0;
@@ -353,14 +285,8 @@ void initOpenGLBuffers(int w, int h)
     glGenBuffers(1, &gl_PBO);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, gl_PBO);
     glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, w * h * 4, h_Src, GL_STREAM_COPY);
-    //While a PBO is registered to CUDA, it can't be used
-    //as the destination for OpenGL drawing calls.
-    //But in our particular case OpenGL is only used
-    //to display the content of the PBO, specified by CUDA kernels,
-    //so we need to register/unregister it only once.
-
-    // DEPRECATED: checkCudaErrors( cudaGLRegisterBufferObject(gl_PBO) );
-    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, gl_PBO,
+ 
+	checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, gl_PBO,
                                                  cudaGraphicsMapFlagsWriteDiscard));
     printf("PBO created.\n");
 
@@ -409,27 +335,10 @@ void initGL(int *argc, char **argv)
         !areGLExtensionsSupported("GL_ARB_vertex_buffer_object GL_ARB_pixel_buffer_object"))
     {
         fprintf(stderr, "Error: failed to get minimal extensions for demo\n");
-        fprintf(stderr, "This sample requires:\n");
-        fprintf(stderr, "  OpenGL version 1.5\n");
-        fprintf(stderr, "  GL_ARB_vertex_buffer_object\n");
-        fprintf(stderr, "  GL_ARB_pixel_buffer_object\n");
         exit(EXIT_SUCCESS);
     }
 
     printf("OpenGL window created.\n");
-}
-
-void initData(int argc, char **argv)
-{
-    // check for hardware double precision support
-    int dev = 0;
-    dev = findCudaDevice(argc, (const char **)argv);
-
-    cudaDeviceProp deviceProp;
-    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, dev));
-    version = deviceProp.major*10 + deviceProp.minor;
-
-    numSMs = deviceProp.multiProcessorCount;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -440,24 +349,14 @@ int main(int argc, char **argv)
 #if defined(__linux__)
     setenv ("DISPLAY", ":0", 0);
 #endif
-
-    // Otherwise it succeeds, we will continue to run this sample
-    initData(argc, argv);
-
-    // Initialize OpenGL context first before the CUDA context is created.  This is needed
-    // to achieve optimal performance with OpenGL/CUDA interop.
     initGL(&argc, argv);
     initOpenGLBuffers(imageW, imageH);
-
 
     printf("Starting GLUT main loop...\n");
     printf("\n");
 
     printf("Press [q] to exit\n");
     printf("\n");
-
-    sdkCreateTimer(&hTimer);
-    sdkStartTimer(&hTimer);
 
 #if defined (__APPLE__) || defined(MACOSX)
     atexit(cleanup);
@@ -466,7 +365,7 @@ int main(int argc, char **argv)
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-    setVSync(0) ;
+    setVSync(0);
 #endif
 
     glutMainLoop();
