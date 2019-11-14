@@ -127,10 +127,7 @@ void renderImage()
 	size_t num_bytes;
 	checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
 
-	double x = (double)imageW;
-	double y = (double)imageH;
-
-	RunMandelbrot1(d_dst, imageW, imageH, crunch, x, y, xJParam, yJParam, s, colors, pass++, animationFrame, precisionMode, numSMs, g_isJuliaSet, version);
+	RenderScene(d_dst, imageW, imageH);
 
 	checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 }
