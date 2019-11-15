@@ -11,8 +11,8 @@ public:
 	constexpr Point3() = default;
 	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z) {}
 
-	constexpr Point3<T> operator+ (Point3<T> other) { return Point3<T>(x + other.x, y + other.y, z + other.z); }
-	constexpr Point3<T> operator- (Point3<T> other) { return Point3<T>(x - other.x, y - other.y, z - other.y); }
+	constexpr Point3<T> operator+ (const Point3<T>& other) const { return Point3<T>(x + other.x, y + other.y, z + other.z); }
+	constexpr Point3<T> operator- (const Point3<T>& other) const { return Point3<T>(x - other.x, y - other.y, z - other.y); }
 
 	T x = 0, y = 0, z = 0;
 };
@@ -26,10 +26,10 @@ public:
 	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
 	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
-	constexpr static T Dot(Vector3<T> a, Vector3<T> b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+	constexpr static T Dot(const Vector3<T> &a, const Vector3<T> &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
-	constexpr Vector3<T> operator* (T scalar) { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
-	constexpr Vector3<T> operator/ (T scalar) { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
+	constexpr Vector3<T> operator* (T scalar) const { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
+	constexpr Vector3<T> operator/ (T scalar) const { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
 
 	void Normalize()
 	{
@@ -43,7 +43,7 @@ public:
 };
 
 template<class T>
-Point3<T> operator+(Point3<T> lhs, Vector3<T> rhs)
+Point3<T> operator+(const Point3<T> &lhs, const Vector3<T> &rhs)
 {
 	return Point3<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 }
@@ -66,9 +66,9 @@ public:
 	Sphere() = default;
 	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
 
-	std::tuple<bool, Point3<T>, Point3<T>> Intersect(Ray<T> ray) const
+	std::tuple<bool, Point3<T>, Point3<T>> Intersect(const Ray<T>& ray) const
 	{
-		const auto L = Vector3<T>(C - ray.O);
+		auto L = Vector3<T>(C - ray.O);
 		auto tCa = Vector3<T>::Dot(L, ray.D);
 
 		if (tCa < 0)
