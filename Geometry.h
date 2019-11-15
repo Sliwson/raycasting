@@ -95,12 +95,12 @@ template<class T>
 class Matrix4
 {
 public:
-	Matrix4 = default();
+	Matrix4<T>() = default;
 
 	const T* operator [] (int i) const { return M[i]; }
 	T* operator [] (int i) { return M[i]; }
 
-	Matrix<T> operator* (const Matrix4<T> rhs) const
+	Matrix4<T> operator* (const Matrix4<T> rhs) const
 	{
 		Matrix4 result;
 		for (int i = 0; i < 4; i++)
