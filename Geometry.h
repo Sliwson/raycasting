@@ -26,7 +26,7 @@ public:
 	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
 	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
-	constexpr static T Dot(Vector3<T> a, Vector3<T> b) const { return a.x * b.x + a.y * b.y + a.z * b.z; }
+	constexpr static T Dot(Vector3<T> a, Vector3<T> b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 	constexpr Vector3<T> operator* (T scalar) { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
 	constexpr Vector3<T> operator/ (T scalar) { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
