@@ -5,30 +5,6 @@
 constexpr auto PI = 3.14159265358979323846f;
 
 template<class T>
-class Matrix4
-{
-public:
-	Matrix4 = default();
-
-	const T* operator [] (int i) const { return M[i]; }
-	T* operator [] (int i) { return M[i]; }
-
-	Matrix<T> operator* (const Matrix4<T> rhs) const
-	{
-		Matrix4 result;
-		for (int i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++)
-				result[i][j] = M[i][0] * rhs[0][j] + M[i][1] * rhs[1][j] + M[i][2] * rhs[2][j] + M[i][3] * rhs[3][j];
-
-		return result;
-	}
-
-private:
-
-	T M[4][4] = { {1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1} };
-};
-
-template<class T>
 class Point3
 {
 public:
@@ -114,3 +90,50 @@ public:
 	Point3<T> C;
 	T R = T(1);
 };
+
+template<class T>
+class Matrix4
+{
+public:
+	Matrix4 = default();
+
+	const T* operator [] (int i) const { return M[i]; }
+	T* operator [] (int i) { return M[i]; }
+
+	Matrix<T> operator* (const Matrix4<T> rhs) const
+	{
+		Matrix4 result;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				result[i][j] = M[i][0] * rhs[0][j] + M[i][1] * rhs[1][j] + M[i][2] * rhs[2][j] + M[i][3] * rhs[3][j];
+
+		return result;
+	}
+
+	Point3<T> Translate(Point3<T> p)
+	{
+		auto point = Point3<T>(p.x * M[0][0] + p.y * M[1][0] + p.z * M[2][0] + M[3][0],
+			p.x * M[0][1] + p.y * M[1][1] + p.z * M[2][1] + M[3][1],
+			p.x * M[0][2] + p.y * M[1][2] + p.z * M[2][2] + M[3][2]);
+
+		T w = p.x * M[0][3] + p.y * M[1][3] + p.z * M[2][3] + M[3][3];
+		if (w != 1 && w != 0)
+		{
+			point.x /= w; point.y /= w; point.z /= w;
+		}
+
+		return point;
+	}
+
+	Vector3<T> Translate(Vector3<T> p)
+	{
+		return Vector3<T>(p.x * M[0][0] + p.y * M[1][0] + p.z * M[2][0],
+			p.x * M[0][1] + p.y * M[1][1] + p.z * M[2][1],
+			p.x * M[0][2] + p.y * M[1][2] + p.z * M[2][2]);
+	}
+
+private:
+
+	T M[4][4] = { {1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1} };
+};
+
