@@ -105,7 +105,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 		float ksm = ks * pow(Dot(r, viewVector), alpha);
 		float multiplier = kdm + ksm;
 
-		Multiply(color, multiplier);
+		color = Multiply(sphereColor, multiplier);
 	}
 
 	return color;
@@ -118,7 +118,7 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	auto color = GetColorOpt(imageW, imageH, x, y);
+	auto color = GetColor(imageW, imageH, x, y);
 	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
