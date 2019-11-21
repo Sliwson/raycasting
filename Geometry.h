@@ -26,6 +26,7 @@ public:
 	__device__ __host__	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
 	__device__ __host__	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
+	__device__ __host__ constexpr T LengthSquared() const { return x * x + y * y + z * z; }
 	__device__ __host__	constexpr static T Dot(const Vector3<T> &a, const Vector3<T> &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 	__device__ __host__	constexpr Vector3<T> operator* (T scalar) const { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
