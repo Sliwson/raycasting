@@ -57,7 +57,7 @@ __device__ float3 GetColor(const int imageW, const int imageH, const int x, cons
 	return color;
 }
 
-__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y)
+__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y, float gameTimer)
 {
 	float cameraToWorld[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 	float scale = tan(PI / 4);
@@ -76,7 +76,10 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 	//hardcoded constants
 	const int lightCount = 3;
-	float3 lightPositions[lightCount] = { { -200, -200, -200 }, {200, -200, -200}, {0, -200, -2000} };
+	float s = gameTimer / 2;
+	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW, cosf(s) * imageH},
+										{sinf(s + PI * 0.66) * imageW, -200, cosf(s + PI * 0.66) * imageH}, 
+										{sinf(s + 1.33 * PI) * 00, -200, cosf(s + 1.33 * PI) * 300 - 300} };
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
 	float3 sphereCenter = { 0, imageH / 11, -4 };
@@ -115,14 +118,14 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	return outColor;
 }
 
-__global__ void Render(uchar4 *dst, const int imageW, const int imageH)
+__global__ void Render(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
 	//calculate pixel coordinates
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	auto color = GetColorOpt(imageW, imageH, x, y);
+	auto color = GetColorOpt(imageW, imageH, x, y, gameTimer);
 	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
@@ -133,12 +136,12 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 } 
 
 
-void RenderScene(uchar4 *dst, const int imageW, const int imageH)
+void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
     dim3 threads(blockX, blockY);
     dim3 grid(iDivUp(imageW, blockX), iDivUp(imageH, blockY));
 
-	Render<<<grid, threads>>>(dst, imageW, imageH);
+	Render<<<grid, threads>>>(dst, imageW, imageH, gameTimer);
 
     getLastCudaError("Raycasting kernel execution failed.\n");
 }

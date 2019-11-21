@@ -87,13 +87,26 @@ void computeFPS()
 	}
 }
 
-void renderImage()
+float getDt()
+{
+	static int fpsCounter = 0;
+	static auto timer = std::chrono::high_resolution_clock::now();
+
+	fpsCounter++;
+
+	const auto milisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - timer).count();
+	timer = std::chrono::high_resolution_clock::now();
+
+	return milisecondsElapsed / 1000.f;
+}
+
+void renderImage(float gameTimer)
 {
 	checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
 	size_t num_bytes;
 	checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_dst, &num_bytes, cuda_pbo_resource));
 
-	RenderScene(d_dst, imageW, imageH);
+	RenderScene(d_dst, imageW, imageH, gameTimer);
 
 	checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 }
@@ -101,7 +114,10 @@ void renderImage()
 // OpenGL display function
 void displayFunc(void)
 {
-    renderImage();
+	static float gameTimer = 0.f;
+
+	gameTimer += getDt();
+    renderImage(gameTimer);
 
     // load texture from PBO
     glBindTexture(GL_TEXTURE_2D, gl_Tex);
