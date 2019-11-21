@@ -15,18 +15,33 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
+	Matrix4<float> cameraToWorld;
+	float scale = tan(PI / 4);
+	float imageAspectRatio = imageW / (float)imageH;
+	
+	auto origin = cameraToWorld.Translate(Point3<float>());
+
+	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale;
+	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale / imageAspectRatio;
+	auto direction = cameraToWorld.Translate(Vector3<float>(rayx, rayy, -1));
+	direction.Normalize();
+
+	Point3<float> p1, p2;
+	auto sphere = Sphere<float>(Point3<float>(0, 0, -100), 20.f);
+	auto result = sphere.Intersect(Ray<float>(origin, direction), &p1, &p2);
+
 	if (x < imageW && y < imageH)
 	{
-		//calculate camera
-		float aspectRatio = (float)imageW / imageH;
-		float fov = PI / 2;
-		float fovTan = tan(fov * PI / 360);
-		float pixelX = (2 * (((float)x + 0.5) / imageW) - 1) * fovTan * aspectRatio;
-		float pixelY = (1 - 2 * ((float)y + 0.5) / imageH) * fovTan;
-
-		dst[pixel].x = (int)((float)x / imageW * 255);
-		dst[pixel].y = (int)((float)y / imageH * 255);
-		dst[pixel].z = 0;
+		if (result)
+		{
+			dst[pixel].x = (int)((float)x / imageW * 255);
+			dst[pixel].y = (int)((float)y / imageH * 255);
+			dst[pixel].z = 0;
+		}
+		else
+		{
+			dst[pixel].x = dst[pixel].y = dst[pixel].z = 0;
+		}
 	}
 } 
 

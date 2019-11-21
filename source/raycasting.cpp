@@ -368,11 +368,11 @@ void initGL(int *argc, char **argv)
 
 void geometry_test()
 {
-	auto sphere = Sphere<float>(Point3<float>(0, 0, 0), 9.f);
+	/*auto sphere = Sphere<float>(Point3<float>(0, 0, 0), 9.f);
 	auto direction = Vector3<float>(2, 1, 0);
 	direction.Normalize();
 	auto ray = Ray<float>(Point3<float>(-10, 0, 0), direction);
-	auto intersection = sphere.Intersect(ray);
+	auto intersection = sphere.Intersect(ray);*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
