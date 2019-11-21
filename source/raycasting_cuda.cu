@@ -75,11 +75,12 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	Normalize(cameraRayDirection);
 
 	//hardcoded constants
-	float3 lightPosition = { -200, -200, -200 };
-	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
+	const int lightCount = 3;
+	float3 lightPositions[lightCount] = { { -200, -200, -200 }, {200, -200, -200}, {0, -200, -2000} };
+	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
-	float3 sphereCenter = { 0, imageH / 10, -4 };
-	float sphereRadius = imageH / 10;
+	float3 sphereCenter = { 0, imageH / 11, -4 };
+	float sphereRadius = imageH / 11;
 	float3 sphereColor = { .9f, .9f, 0.f };
 	
 	float kd = 0.5;
@@ -93,22 +94,25 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	{
 		float3 normal = Subtract(intersection, sphereCenter);
 		Normalize(normal);
+		outColor = { 0, 0, 0 };
 
-		float3 lightVector = Subtract(lightPosition, intersection);
-		Normalize(lightVector);
+		for (int i = 0; i < lightCount; i++)
+		{
+			float3 lightVector = Subtract(lightPositions[i], intersection);
+			Normalize(lightVector);
 
-		float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
-		float3 viewVector = Subtract(intersection, cameraOrigin);
-		Normalize(viewVector);
+			float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
+			float3 viewVector = Subtract(intersection, cameraOrigin);
+			Normalize(viewVector);
 
-		float kdm = kd * Dot(normal, lightVector);
-		float ksm = ks * pow(Dot(r, viewVector), alpha);
-		float multiplier = kdm + ksm;
-
-		color = Multiply(sphereColor, multiplier);
+			float kdm = kd * Dot(normal, lightVector);
+			float ksm = ks * pow(Dot(r, viewVector), alpha);
+			float multiplier = kdm + ksm;
+			outColor = Add(outColor, Multiply(sphereColor, multiplier));
+		}
 	}
 
-	return color;
+	return outColor;
 }
 
 __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
@@ -118,7 +122,7 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	auto color = GetColor(imageW, imageH, x, y);
+	auto color = GetColorOpt(imageW, imageH, x, y);
 	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
