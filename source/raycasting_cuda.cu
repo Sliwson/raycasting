@@ -9,13 +9,8 @@ constexpr int blockX = 16;
 constexpr int blockY = 16;
 }
 
-__global__ void Render(uchar4 *dst, const int imageW, const int imageH)
+__device__ float3 GetColor(const int imageW, const int imageH, const int x, const int y)
 {
-	//calculate pixel coordinates
-	const int x = blockIdx.x * blockDim.x + threadIdx.x;
-	const int y = blockIdx.y * blockDim.y + threadIdx.y;
-	const int pixel = y * imageW + x;
-
 	//calculate camera ray
 	Matrix4<float> cameraToWorld;
 	float scale = tan(PI / 4);
@@ -46,7 +41,7 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 		auto lightVector = Vector3<float>(light - intersection);
 		lightVector.Normalize();
 
-		auto r =  normal * 2.f * Vector3<float>::Dot(lightVector, normal) - lightVector;
+		auto r = normal * 2.f * Vector3<float>::Dot(lightVector, normal) - lightVector;
 		auto view = Vector3<float>(intersection - origin);
 		view.Normalize();
 
@@ -59,7 +54,72 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 		color.z = sphereColor.z * multiplier;
 	}
 
-	ClampColor(&color);
+	return color;
+}
+
+__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y)
+{
+	float cameraToWorld[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+	float scale = tan(PI / 4);
+	float imageAspectRatio = imageW / (float)imageH;
+
+	//getcamera ray
+	float3 cameraOrigin = { 0, 0, 0 };
+	TranslatePoint(cameraOrigin, cameraToWorld);
+
+	//get camera ray
+	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
+	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
+	float3 cameraRayDirection = { rayx, rayy, -1 };
+	TranslatePoint(cameraRayDirection, cameraToWorld);
+	Normalize(cameraRayDirection);
+
+	//hardcoded constants
+	float3 lightPosition = { -200, -200, -200 };
+	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
+	
+	float3 sphereCenter = { 0, imageH / 10, -4 };
+	float sphereRadius = imageH / 10;
+	float3 sphereColor = { .9f, .9f, 0.f };
+	
+	float kd = 0.5;
+	float ks = 0.5;
+	int alpha = 10;
+
+	//intersection
+	float3 intersection = { 0, 0, 0 };
+	bool result = Intersect(sphereCenter, sphereRadius, cameraOrigin, cameraRayDirection, intersection);
+	if (result)
+	{
+		float3 normal = Subtract(intersection, sphereCenter);
+		Normalize(normal);
+
+		float3 lightVector = Subtract(lightPosition, intersection);
+		Normalize(lightVector);
+
+		float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
+		float3 viewVector = Subtract(intersection, cameraOrigin);
+		Normalize(viewVector);
+
+		float kdm = kd * Dot(normal, lightVector);
+		float ksm = ks * pow(Dot(r, viewVector), alpha);
+		float multiplier = kdm + ksm;
+
+		Multiply(color, multiplier);
+	}
+
+	return color;
+}
+
+__global__ void Render(uchar4 *dst, const int imageW, const int imageH)
+{
+	//calculate pixel coordinates
+	const int x = blockIdx.x * blockDim.x + threadIdx.x;
+	const int y = blockIdx.y * blockDim.y + threadIdx.y;
+	const int pixel = y * imageW + x;
+
+	auto color = GetColorOpt(imageW, imageH, x, y);
+	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
 		dst[pixel].x = color.x * 255;
