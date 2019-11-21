@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <chrono>
 
+#include "Geometry.h"
 #include "raycasting_kernel.h"
 
 //OpenGL PBO and texture "names"
@@ -365,6 +366,11 @@ void initGL(int *argc, char **argv)
     printf("OpenGL window created.\n");
 }
 
+void geometry_test()
+{
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main program
 ////////////////////////////////////////////////////////////////////////////////
@@ -381,6 +387,8 @@ int main(int argc, char **argv)
 
     printf("Press [q] to exit\n");
     printf("\n");
+
+	geometry_test();
 
 #if defined (__APPLE__) || defined(MACOSX)
     atexit(cleanup);
