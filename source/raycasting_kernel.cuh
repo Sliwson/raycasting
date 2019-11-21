@@ -18,9 +18,9 @@ __device__ inline void Clamp(float& value, float min = 0, float max = 1)
 
 __device__ inline void ClampColor(float3& color)
 {
-	Clamp(color.x);
-	Clamp(color.y);
-	Clamp(color.z);
+	Clamp(color.x, 0.1, 0.9);
+	Clamp(color.y, 0.1, 0.9);
+	Clamp(color.z, 0.1, 0.9);
 }
 
 __device__ inline float3 Add(const float3& lhs, const float3& rhs)

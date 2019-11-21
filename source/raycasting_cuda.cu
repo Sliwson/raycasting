@@ -77,9 +77,10 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	//hardcoded constants
 	const int lightCount = 3;
 	float s = gameTimer / 2;
-	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW, cosf(s) * imageH},
-										{sinf(s + PI * 0.66) * imageW, -200, cosf(s + PI * 0.66) * imageH}, 
-										{sinf(s + 1.33 * PI) * 00, -200, cosf(s + 1.33 * PI) * 300 - 300} };
+	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW, cosf(s) * imageW},
+										{sinf(s + PI * 0.66) * imageW, -200, cosf(s + PI * 0.66) * imageW}, 
+										{sinf(s + 1.33 * PI) * imageW, -200, cosf(s + 1.33 * PI) * 300 - 300} };
+
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
 	float3 sphereCenter = { 0, imageH / 11, -4 };
