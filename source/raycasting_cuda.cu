@@ -28,12 +28,12 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	auto cameraRay = Ray<float>(origin, direction);
 
 	//hardcoded constants
-	auto light = Point3<float>(-10, -10, 0);
+	auto light = Point3<float>(-200, -200, -200);
 	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	auto sphere = Sphere<float>(Point3<float>(0, imageH / 5, -10), imageH / 5);
+	auto sphere = Sphere<float>(Point3<float>(0, imageH / 10, -4), imageH / 10);
 	float3 sphereColor = { .9f, .9f, 0.f };
-	float kd = 1;
-	float ks = 0;
+	float kd = 0.5;
+	float ks = 0.5;
 	int alpha = 10;
 
 	//intersection
@@ -46,11 +46,17 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 		auto lightVector = Vector3<float>(light - intersection);
 		lightVector.Normalize();
 
-		float kdm = kd * Vector3<float>::Dot(normal, lightVector);
+		auto r =  normal * 2.f * Vector3<float>::Dot(lightVector, normal) - lightVector;
+		auto view = Vector3<float>(intersection - origin);
+		view.Normalize();
 
-		color.x = sphereColor.x * kdm;
-		color.y = sphereColor.y * kdm;
-		color.z = sphereColor.z * kdm;
+		float kdm = kd * Vector3<float>::Dot(normal, lightVector);
+		float ksm = ks * pow(Vector3<float>::Dot(r, view), alpha);
+		float multiplier = kdm + ksm;
+
+		color.x = sphereColor.x * multiplier;
+		color.y = sphereColor.y * multiplier;
+		color.z = sphereColor.z * multiplier;
 	}
 
 	ClampColor(&color);

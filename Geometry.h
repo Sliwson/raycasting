@@ -31,6 +31,7 @@ public:
 
 	__device__ __host__	constexpr Vector3<T> operator* (T scalar) const { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
 	__device__ __host__	constexpr Vector3<T> operator/ (T scalar) const { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
+	__device__ __host__ constexpr Vector3<T> operator- (const Vector3<T>& other) { return Vector3<T>(x - other.x, y - other.y, z - other.z); }
 
 	__device__ __host__	void Normalize()
 	{
