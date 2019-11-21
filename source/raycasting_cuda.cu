@@ -27,21 +27,30 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	direction.Normalize();
 	auto cameraRay = Ray<float>(origin, direction);
 
+	//hardcoded constants
+	auto light = Point3<float>(0, 0, 0);
 	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	
-	Point3<float> p1, p2;
-	auto sphere = Sphere<float>(Point3<float>(-30, -30, -100), 20.f);
-	auto result = sphere.Intersect(cameraRay, &p1, &p2);
+	float3 sphereColor = { 1.f, 0.f, 0.f };
+	float kd = 1;
+	float ks = 0;
+	int alpha = 10;
+
+	//intersection
+	Point3<float> intersection;
+	auto sphere = Sphere<float>(Point3<float>(0, 0, -50), 20.f);
+	auto result = sphere.Intersect(cameraRay, &intersection);
 	if (result)
 	{
-		auto l1 = Vector3<float>(p1 - origin).LengthSquared();
-		auto l2 = Vector3<float>(p2 - origin).LengthSquared();
+		auto normal = Vector3<float>(intersection - sphere.C);
+		normal.Normalize();
+		auto lightVector = Vector3<float>(light - intersection);
+		lightVector.Normalize();
 
-		if (l2 < l1)
-			p1 = p2;
+		float kdm = kd * Vector3<float>::Dot(normal, lightVector);
 
-		auto normal = Vector3<float>(p1 - sphere.C);
-		color = { 1, 1, 1 };
+		color.x = sphereColor.x * kdm;
+		color.y = sphereColor.y * kdm;
+		color.z = sphereColor.z * kdm;
 	}
 
 	ClampColor(&color);
