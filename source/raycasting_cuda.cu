@@ -28,16 +28,16 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 	auto cameraRay = Ray<float>(origin, direction);
 
 	//hardcoded constants
-	auto light = Point3<float>(0, 0, 0);
+	auto light = Point3<float>(-10, -10, 0);
 	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	float3 sphereColor = { 1.f, 0.f, 0.f };
+	auto sphere = Sphere<float>(Point3<float>(0, imageH / 5, -10), imageH / 5);
+	float3 sphereColor = { .9f, .9f, 0.f };
 	float kd = 1;
 	float ks = 0;
 	int alpha = 10;
 
 	//intersection
 	Point3<float> intersection;
-	auto sphere = Sphere<float>(Point3<float>(0, 0, -50), 20.f);
 	auto result = sphere.Intersect(cameraRay, &intersection);
 	if (result)
 	{
