@@ -8,11 +8,11 @@ template<class T>
 class Point3
 {
 public:
-	constexpr Point3() = default;
-	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z) {}
+	__device__ __host__ constexpr Point3() = default;
+	__device__ __host__	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z) {}
 
-	constexpr Point3<T> operator+ (const Point3<T>& other) const { return Point3<T>(x + other.x, y + other.y, z + other.z); }
-	constexpr Point3<T> operator- (const Point3<T>& other) const { return Point3<T>(x - other.x, y - other.y, z - other.y); }
+	__device__ __host__ constexpr Point3<T> operator+ (const Point3<T>& other) const { return Point3<T>(x + other.x, y + other.y, z + other.z); }
+	__device__ __host__ constexpr Point3<T> operator- (const Point3<T>& other) const { return Point3<T>(x - other.x, y - other.y, z - other.y); }
 
 	T x = 0, y = 0, z = 0;
 };
@@ -21,17 +21,17 @@ template<class T>
 class Vector3
 {
 public:
-	constexpr Vector3() = default;
-	constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
-	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
+	__device__ __host__ constexpr Vector3() = default;
+	__device__ __host__ constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+	__device__ __host__	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
-	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
-	constexpr static T Dot(const Vector3<T> &a, const Vector3<T> &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+	__device__ __host__	constexpr T Length() const { return std::sqrt(x * x + y * y + z * z); }
+	__device__ __host__	constexpr static T Dot(const Vector3<T> &a, const Vector3<T> &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
-	constexpr Vector3<T> operator* (T scalar) const { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
-	constexpr Vector3<T> operator/ (T scalar) const { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
+	__device__ __host__	constexpr Vector3<T> operator* (T scalar) const { return Vector3 <T>(x * scalar, y * scalar, z * scalar); }
+	__device__ __host__	constexpr Vector3<T> operator/ (T scalar) const { return Vector3<T>(x / scalar, y / scalar, z / scalar); }
 
-	void Normalize()
+	__device__ __host__	void Normalize()
 	{
 		const auto length = Length();
 		x /= length;
@@ -43,7 +43,7 @@ public:
 };
 
 template<class T>
-Point3<T> operator+(const Point3<T> &lhs, const Vector3<T> &rhs)
+__device__ __host__ Point3<T> inline operator+(const Point3<T> &lhs, const Vector3<T> &rhs)
 {
 	return Point3<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 }
@@ -52,8 +52,8 @@ template<class T>
 class Ray
 {
 public:
-	Ray() = default;
-	Ray(Point3<T> origin, Vector3<T> direction) : O(origin), D(direction) {}
+	__device__ __host__	Ray() = default;
+	__device__ __host__	Ray(Point3<T> origin, Vector3<T> direction) : O(origin), D(direction) {}
 	
 	Point3<T> O;
 	Vector3<T> D;
@@ -63,28 +63,28 @@ template <class T>
 class Sphere
 {
 public:
-	Sphere() = default;
-	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
+	__device__ __host__	Sphere() = default;
+	__device__ __host__	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
 
-	std::tuple<bool, Point3<T>, Point3<T>> Intersect(const Ray<T>& ray) const
+	__device__ __host__	bool Intersect(const Ray<T>& ray, Point3<T> *p1, Point3<T> *p2) const
 	{
-		auto L = Vector3<T>(C - ray.O);
+		const auto L = Vector3<T>(C - ray.O);
 		auto tCa = Vector3<T>::Dot(L, ray.D);
 
 		if (tCa < 0)
-			return std::make_tuple(false, Point3<T>(), Point3<T>());
+			return false;
 
 		T d2 = Vector3<T>::Dot(L, L) - tCa * tCa;
 		if (d2 > R * R)
-			return std::make_tuple(false, Point3<T>(), Point3<T>());
+			return false;
 
 		T thc = std::sqrt(R * R - d2);
 		T t0 = tCa - thc;
 		T t1 = tCa + thc;
 
-		auto p1 = ray.O + ray.D * t0;
-		auto p2 = ray.O + ray.D * t1;
-		return std::make_tuple(true, p1, p2);
+		*p1 = ray.O + ray.D * t0;
+		*p2 = ray.O + ray.D * t1;
+		return true;
 	}
 
 	Point3<T> C;
@@ -95,12 +95,12 @@ template<class T>
 class Matrix4
 {
 public:
-	Matrix4<T>() = default;
+	__device__ __host__	Matrix4<T>() = default;
 
-	const T* operator [] (int i) const { return M[i]; }
-	T* operator [] (int i) { return M[i]; }
+	__device__ __host__	const T* operator [] (int i) const { return M[i]; }
+	__device__ __host__	T* operator [] (int i) { return M[i]; }
 
-	Matrix4<T> operator* (const Matrix4<T> rhs) const
+	__device__ __host__	Matrix4<T> operator* (const Matrix4<T> rhs) const
 	{
 		Matrix4 result;
 		for (int i = 0; i < 4; i++)
@@ -110,7 +110,7 @@ public:
 		return result;
 	}
 
-	Point3<T> Translate(Point3<T> p)
+	__device__ __host__	Point3<T> Translate(Point3<T> p)
 	{
 		auto point = Point3<T>(p.x * M[0][0] + p.y * M[1][0] + p.z * M[2][0] + M[3][0],
 			p.x * M[0][1] + p.y * M[1][1] + p.z * M[2][1] + M[3][1],
@@ -125,7 +125,7 @@ public:
 		return point;
 	}
 
-	Vector3<T> Translate(Vector3<T> p)
+	__device__ __host__	Vector3<T> Translate(Vector3<T> p)
 	{
 		return Vector3<T>(p.x * M[0][0] + p.y * M[1][0] + p.z * M[2][0],
 			p.x * M[0][1] + p.y * M[1][1] + p.z * M[2][1],
