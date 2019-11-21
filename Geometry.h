@@ -12,7 +12,7 @@ public:
 	__device__ __host__	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z) {}
 
 	__device__ __host__ constexpr Point3<T> operator+ (const Point3<T>& other) const { return Point3<T>(x + other.x, y + other.y, z + other.z); }
-	__device__ __host__ constexpr Point3<T> operator- (const Point3<T>& other) const { return Point3<T>(x - other.x, y - other.y, z - other.y); }
+	__device__ __host__ constexpr Point3<T> operator- (const Point3<T>& other) const { return Point3<T>(x - other.x, y - other.y, z - other.z); }
 
 	T x = 0, y = 0, z = 0;
 };
@@ -67,7 +67,7 @@ public:
 	__device__ __host__	Sphere() = default;
 	__device__ __host__	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
 
-	__device__ __host__	bool Intersect(const Ray<T>& ray, Point3<T> *p1, Point3<T> *p2) const
+	__device__ __host__	bool Intersect(const Ray<T>& ray, Point3<T> *p) const
 	{
 		const auto L = Vector3<T>(C - ray.O);
 		auto tCa = Vector3<T>::Dot(L, ray.D);
@@ -83,8 +83,15 @@ public:
 		T t0 = tCa - thc;
 		T t1 = tCa + thc;
 
-		*p1 = ray.O + ray.D * t0;
-		*p2 = ray.O + ray.D * t1;
+		if (t0 > t1) std::swap(t0, t1);
+		if (t0 < 0)
+		{
+			t0 = t1;
+			if (t0 < 0)
+				return false;
+		}
+
+		*p = ray.O + ray.D * t0;
 		return true;
 	}
 
