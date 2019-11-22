@@ -28,11 +28,10 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	Normalize(cameraRayDirection);
 
 	//hardcoded constants
-	const int lightCount = 3;
+	const int lightCount = 2;
 	float s = gameTimer / 2;
 	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
-										{sinf(s + PI * 0.66) * imageW * 2, -200, cosf(s + PI * 0.66) * imageW * 2}, 
-										{sinf(s + 1.33 * PI) * imageW * 2, -200, cosf(s + 1.33 * PI) * 300 - 300} };
+										{sinf(s + PI * 0.66) * imageW * 2, -200, cosf(s + PI * 0.66) * imageW * 2} };
 
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
@@ -41,9 +40,10 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
 		{ { 1000, -300, -1000}, 100.f, { 0, .9f, .9f } } };
 	
+	float ka = 0.1;
 	float kd = 0.5;
-	float ks = 0.5;
-	int alpha = 10;
+	float ks = 0.4;
+	int alpha = 32;
 
 	//found intersection with nearest sphere
 	float3 intersection = { 0, 0, 0 };
@@ -98,6 +98,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 			float ksm = ks * pow(d2, alpha);
 			float multiplier = kdm + ksm;
 			outColor = Add(outColor, Multiply(sphere.color, multiplier));
+			outColor = Add(outColor, Multiply(sphere.color, ka));
 		}
 	}
 
