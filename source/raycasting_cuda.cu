@@ -35,10 +35,12 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
-	const int sphereCount = 3;
-	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .9f, .9f, 0.f } },
+	const int sphereCount = 5;
+	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .14f, .296f, 0.225f } },
 		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
-		{ { 1000, -300, -1000}, 100.f, { 0, .9f, .9f } } };
+		{ { 0, -400, -1000}, 100.f, { 0, .4f, .9f } },
+		{ { 800, -600, -1200}, 100.f, { 0, .9f, .4f } },
+		{ { -800, -600, -1200}, 100.f, { .3f, .2f, .6f } } };
 	
 	float ka = 0.1;
 	float kd = 0.5;
