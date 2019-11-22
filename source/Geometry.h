@@ -8,7 +8,7 @@ template<class T>
 class Point3
 {
 public:
-	__device__ __host__ constexpr Point3() = default;
+	constexpr Point3() = default;
 	__device__ __host__	constexpr Point3(T x, T y, T z) : x(x), y(y), z(z) {}
 
 	__device__ __host__ constexpr Point3<T> operator+ (const Point3<T>& other) const { return Point3<T>(x + other.x, y + other.y, z + other.z); }
@@ -21,7 +21,7 @@ template<class T>
 class Vector3
 {
 public:
-	__device__ __host__ constexpr Vector3() = default;
+	constexpr Vector3() = default;
 	__device__ __host__ constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
 	__device__ __host__	constexpr Vector3(Point3<T> p) : x(p.x), y(p.y), z(p.z) {}
 
@@ -54,7 +54,7 @@ template<class T>
 class Ray
 {
 public:
-	__device__ __host__	Ray() = default;
+	Ray() = default;
 	__device__ __host__	Ray(Point3<T> origin, Vector3<T> direction) : O(origin), D(direction) {}
 	
 	Point3<T> O;
@@ -65,7 +65,7 @@ template <class T>
 class Sphere
 {
 public:
-	__device__ __host__	Sphere() = default;
+	Sphere() = default;
 	__device__ __host__	Sphere(Point3<T> center, T radius) : C(center), R(radius) {}
 
 	__device__ __host__	bool Intersect(const Ray<T>& ray, Point3<T> *p) const
@@ -84,7 +84,13 @@ public:
 		T t0 = tCa - thc;
 		T t1 = tCa + thc;
 
-		if (t0 > t1) std::swap(t0, t1);
+		if (t0 > t1) 
+		{
+			T tmp = t0;
+			t0 = t1;
+			t1 = tmp;
+		}
+
 		if (t0 < 0)
 		{
 			t0 = t1;
@@ -104,7 +110,7 @@ template<class T>
 class Matrix4
 {
 public:
-	__device__ __host__	Matrix4<T>() = default;
+	Matrix4<T>() = default;
 
 	__device__ __host__	const T* operator [] (int i) const { return M[i]; }
 	__device__ __host__	T* operator [] (int i) { return M[i]; }

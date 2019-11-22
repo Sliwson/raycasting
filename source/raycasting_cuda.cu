@@ -9,7 +9,8 @@ constexpr int blockX = 16;
 constexpr int blockY = 16;
 }
 
-__device__ float3 GetColor(const int imageW, const int imageH, const int x, const int y)
+// class-code
+float3 GetColor(const int imageW, const int imageH, const int x, const int y)
 {
 	//calculate camera ray
 	Matrix4<float> cameraToWorld;
@@ -17,7 +18,7 @@ __device__ float3 GetColor(const int imageW, const int imageH, const int x, cons
 	float imageAspectRatio = imageW / (float)imageH;
 	auto origin = cameraToWorld.Translate(Point3<float>());
 	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
-	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
+	float rayy = (1 - 2 * ((float)y + 0.5f) / (float)imageH) * scale;
 	auto direction = cameraToWorld.Translate(Vector3<float>(rayx, rayy, -1));
 	direction.Normalize();
 	auto cameraRay = Ray<float>(origin, direction);
@@ -25,7 +26,7 @@ __device__ float3 GetColor(const int imageW, const int imageH, const int x, cons
 	//hardcoded constants
 	auto light = Point3<float>(-200, -200, -200);
 	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	auto sphere = Sphere<float>(Point3<float>(0, imageH / 10, -4), imageH / 10);
+	auto sphere = Sphere<float>(Point3<float>(0.f, imageH / 10.f, -4.f), imageH / 10.f);
 	float3 sphereColor = { .9f, .9f, 0.f };
 	float kd = 0.5;
 	float ks = 0.5;
@@ -57,6 +58,7 @@ __device__ float3 GetColor(const int imageW, const int imageH, const int x, cons
 	return color;
 }
 
+// device optimized code
 __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y, float gameTimer)
 {
 	float cameraToWorld[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
@@ -83,7 +85,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
-	float3 sphereCenter = { 0, imageH / 11, -4 };
+	float3 sphereCenter = { 0, imageH / 11.f, -4 };
 	float sphereRadius = imageH / 11;
 	float3 sphereColor = { .9f, .9f, 0.f };
 	
