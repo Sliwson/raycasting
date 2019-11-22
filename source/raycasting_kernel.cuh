@@ -10,6 +10,13 @@ inline int iDivUp(int a, int b)
 } 
 
 // Geometry
+struct Sphere
+{
+	float3 center;
+	float radius;
+	float3 color;
+};
+
 __device__ inline void Clamp(float& value, float min = 0, float max = 1)
 {
 	if (value < min) value = min;
