@@ -30,16 +30,16 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	//hardcoded constants
 	const int lightCount = 3;
 	float s = gameTimer / 2;
-	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW, cosf(s) * imageW},
-										{sinf(s + PI * 0.66) * imageW, -200, cosf(s + PI * 0.66) * imageW}, 
-										{sinf(s + 1.33 * PI) * imageW, -200, cosf(s + 1.33 * PI) * 300 - 300} };
+	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
+										{sinf(s + PI * 0.66) * imageW * 2, -200, cosf(s + PI * 0.66) * imageW * 2}, 
+										{sinf(s + 1.33 * PI) * imageW * 2, -200, cosf(s + 1.33 * PI) * 300 - 300} };
 
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
 	const int sphereCount = 3;
 	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .9f, .9f, 0.f } },
-		{ { -1000, -100, -1000 }, 50.f, { .9f, .9f, 9.f } },
-		{ { 1000, -100, -1000}, 40.f, { 0, .9f, .9f } } };
+		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
+		{ { 1000, -300, -1000}, 100.f, { 0, .9f, .9f } } };
 	
 	float kd = 0.5;
 	float ks = 0.5;
@@ -57,7 +57,8 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 		bool result = Intersect(sphere.center, sphere.radius, cameraOrigin, cameraRayDirection, tempIntersection);
 		if (result) 
 		{
-			float distance = LengthSquared(Subtract(tempIntersection, cameraOrigin));
+			float3 diff = Subtract(tempIntersection, cameraOrigin);
+			float distance = LengthSquared(diff);
 			if (distance < minDistance)
 			{
 				minDistance = distance;
@@ -83,9 +84,18 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 			float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
 			float3 viewVector = Subtract(intersection, cameraOrigin);
 			Normalize(viewVector);
+			
+			float d1 =  Dot(normal, lightVector);
+			if (d1 < 0)
+				d1 = 0;
 
-			float kdm = kd * Dot(normal, lightVector);
-			float ksm = ks * pow(Dot(r, viewVector), alpha);
+			float kdm = kd * d1;
+			
+			float d2 = Dot(r, viewVector);
+			if (d2 < 0)
+				d2 = 0;
+
+			float ksm = ks * pow(d2, alpha);
 			float multiplier = kdm + ksm;
 			outColor = Add(outColor, Multiply(sphere.color, multiplier));
 		}
