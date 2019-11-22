@@ -36,17 +36,41 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
 	
-	Sphere sphere = { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .9f, .9f, 0.f } };
+	const int sphereCount = 3;
+	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .9f, .9f, 0.f } },
+		{ { -1000, -100, -1000 }, 50.f, { .9f, .9f, 9.f } },
+		{ { 1000, -100, -1000}, 40.f, { 0, .9f, .9f } } };
 	
 	float kd = 0.5;
 	float ks = 0.5;
 	int alpha = 10;
 
-	//intersection
+	//found intersection with nearest sphere
 	float3 intersection = { 0, 0, 0 };
-	bool result = Intersect(sphere.center, sphere.radius, cameraOrigin, cameraRayDirection, intersection);
-	if (result)
+	int iIntersected = -1;
+	float minDistance = FLT_MAX;
+
+	for (int s = 0; s < sphereCount; s++)
 	{
+		Sphere sphere = spheres[s];
+		float3 tempIntersection = { 0, 0, 0 };
+		bool result = Intersect(sphere.center, sphere.radius, cameraOrigin, cameraRayDirection, tempIntersection);
+		if (result) 
+		{
+			float distance = LengthSquared(Subtract(tempIntersection, cameraOrigin));
+			if (distance < minDistance)
+			{
+				minDistance = distance;
+				iIntersected = s;
+				intersection = tempIntersection;
+			}	
+		}
+	}
+
+	//calculate color
+	if (iIntersected > -1)
+	{
+		Sphere sphere = spheres[iIntersected];
 		float3 normal = Subtract(intersection, sphere.center);
 		Normalize(normal);
 		outColor = { 0, 0, 0 };
