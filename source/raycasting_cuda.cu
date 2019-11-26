@@ -84,7 +84,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 			Normalize(lightVector);
 
 			float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
-			float3 viewVector = Subtract(intersection, cameraOrigin);
+			float3 viewVector = Subtract(cameraOrigin, intersection);
 			Normalize(viewVector);
 			
 			float d1 =  Dot(normal, lightVector);
