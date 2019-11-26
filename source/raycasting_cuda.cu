@@ -20,7 +20,6 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	float3 cameraOrigin = { 0, 0, 0 };
 	TranslatePoint(cameraOrigin, cameraToWorld);
 
-	//get camera ray
 	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
 	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
 	float3 cameraRayDirection = { rayx, rayy, -1 };
