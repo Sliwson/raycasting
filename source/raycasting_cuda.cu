@@ -121,7 +121,7 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, const in
 void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, const int sphereCount, float timer)
 {
 	//earth
-	spheresH[0] = { { 0, 9.9f, -4.f }, 10.f, { .0f, .9f, .4f } };
+	spheresH[0] = { { 0, 10.3f, -4.f }, 10.f, { .0f, .9f, .4f } };
 		
 	// Lissajous curve
 	const float A = 5.f;
@@ -135,7 +135,7 @@ void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, con
 	};
 
 	const auto y = [timer, B, sigma, sphereCount, interval](int i) {
-		return cos(B * timer + i * interval) / 4.f - 0.35f * (1 + i / 7.f);
+		return (cos(B * timer + i * interval) * 0.25f - 0.25f) * (1 + i / 12.f);
 	};
 
 	const int predefinedColors = 4;
