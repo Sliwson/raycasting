@@ -108,10 +108,10 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, const in
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	auto color = GetColorOpt(imageW, imageH, x, y, sphereCount, lightCount, gameTimer);
-	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
+		auto color = GetColorOpt(imageW, imageH, x, y, sphereCount, lightCount, gameTimer);
+		ClampColor(color);
 		dst[pixel].x = color.x * 255;
 		dst[pixel].y = color.y * 255;
 		dst[pixel].z = color.z * 255;
@@ -120,8 +120,9 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, const in
 
 void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, const int sphereCount, float timer)
 {
-	spheresH[0] = { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } };
-
+	//earth
+	spheresH[0] = { { 0, 9.9f, -4.f }, 10.f, { .0f, .9f, .4f } };
+		
 	// Lissajous curve
 	const float A = 5.f;
 	const float B = 4.f;
@@ -150,9 +151,9 @@ void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, con
 
 void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const int lightCount, float timer)
 {
-	const float s = timer / 2.f;
-	lightsH[0] = { 0, sin(s) * imageW * 2, cos(s) * imageW * 2 };
-	lightsH[1] = { sin(s + PI * 0.66f) * imageW * 2, -200, cos(s + PI * 0.66f) * imageW * 2 }; 
+	const float s = timer / 3.f;
+	lightsH[0] = { cos(s) * 6.f, -3.f, sin(s) * 6.f };
+	lightsH[1] = { cos(s + PI / 2.f) * 6.f, -3.f, sin(s + PI / 2.f) * 6.f };
 }
 
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
