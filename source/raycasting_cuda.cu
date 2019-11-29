@@ -137,10 +137,15 @@ void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, con
 		return cos(B * timer + i * interval) / 4.f - 0.35f * (1 + i / 10.f);
 	};
 
+	const int predefinedColors = 10;
+	const float3 colors[predefinedColors] = {
+		{ .9f, .9f, .9f },
+		{ 0.f, .4f, .9f },
+		{ 0, .9f, .4f },
+		{ .3f, .2f, .6f } };
+
 	for (int i = 1; i < sphereCount; i++)
-	{
-		spheresH[i] = { { x(i), y(i), -2.f - 0.3f * i }, 0.1f, { .9f, .9f, 9.f } };
-	}
+		spheresH[i] = { { x(i), y(i), -2.f - 0.3f * i }, 0.1f, colors[i % predefinedColors] };
 }
 
 void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const int lightCount, float timer)
