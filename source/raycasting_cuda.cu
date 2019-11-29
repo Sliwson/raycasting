@@ -121,23 +121,39 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, const in
 void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, const int sphereCount, float timer)
 {
 	spheresH[0] = { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } };
-	spheresH[1] = { { -0.4, -0.4, -3 }, 0.1f, { .9f, .9f, 9.f } };
-	spheresH[2] = { { 0.4, -0.4, -3}, 0.1f, { 0, .4f, .9f } };
-	spheresH[3] = { { -0.6, -0.6, -3}, 0.1f, { 0, .9f, .4f } };
-	spheresH[4] = { { 0.6, -0.6, -3}, 0.1f, { .3f, .2f, .6f } };
+
+	// Lissajous curve
+	const float A = 5.f;
+	const float B = 4.f;
+	const float sigma = PI / 4.f;
+	const float interval = PI / sphereCount;
+	timer /= 4.f;
+	
+	const auto x = [timer, A, sigma, sphereCount, interval](int i) {
+		return sin(A * timer + sigma + i * interval) * 0.6f;
+	};
+
+	const auto y = [timer, B, sigma, sphereCount, interval](int i) {
+		return cos(B * timer + i * interval) / 4.f - 0.35f;
+	};
+
+	for (int i = 1; i < sphereCount; i++)
+	{
+		spheresH[i] = { { x(i), y(i), -2.f * i }, 0.1f, { .9f, .9f, 9.f } };
+	}
 }
 
 void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const int lightCount, float timer)
 {
 	const float s = timer / 2.f;
-	lightsH[0] = { 0, sinf(s) * imageW * 2, cosf(s) * imageW * 2 };
-	lightsH[1] = { sinf(s + PI * 0.66f) * imageW * 2, -200, cosf(s + PI * 0.66f) * imageW * 2 }; 
+	lightsH[0] = { 0, sin(s) * imageW * 2, cos(s) * imageW * 2 };
+	lightsH[1] = { sin(s + PI * 0.66f) * imageW * 2, -200, cos(s + PI * 0.66f) * imageW * 2 }; 
 }
 
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
 	//create spheres and lights, copy them to gpu
-	const int sphereCount = 5;
+	const int sphereCount = 15;
 	Sphere spheresHost[sphereCount];
 	ManipulateSpheres(spheresHost, imageW, imageH, sphereCount, gameTimer);
 	
