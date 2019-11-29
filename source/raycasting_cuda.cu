@@ -4,13 +4,21 @@
 #include "raycasting_kernel.cuh"
 
 namespace {
+//constants
 constexpr int blockX = 16;
 constexpr int blockY = 16;
 constexpr auto PI = 3.14159265358979323846f;
+
+//spheres
+constexpr int maxSpheres = 1024;
+constexpr int maxLights = 128;
+
+__constant__ Sphere spheres[maxSpheres];
+__constant__ float3 lights[maxLights];
 }
 
 // device optimized code
-__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y, float gameTimer)
+__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y, const int sphereCount, const int lightCount, float gameTimer)
 {
 	float cameraToWorld[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 	float scale = tan(PI / 4);
@@ -26,20 +34,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	TranslatePoint(cameraRayDirection, cameraToWorld);
 	Normalize(cameraRayDirection);
 
-	//hardcoded constants
-	const int lightCount = 2;
-	float s = gameTimer / 2;
-	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
-										{sinf(s + PI * 0.66) * imageW * 2, -200, cosf(s + PI * 0.66) * imageW * 2} };
-
 	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	
-	const int sphereCount = 5;
-	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } },
-		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
-		{ { 0, -400, -1000}, 100.f, { 0, .4f, .9f } },
-		{ { 800, -600, -1200}, 100.f, { 0, .9f, .4f } },
-		{ { -800, -600, -1200}, 100.f, { .3f, .2f, .6f } } };
 	
 	float ka = 0.1;
 	float kd = 0.5;
@@ -79,7 +74,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 		for (int i = 0; i < lightCount; i++)
 		{
-			float3 lightVector = Subtract(lightPositions[i], intersection);
+			float3 lightVector = Subtract(lights[i], intersection);
 			Normalize(lightVector);
 
 			float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
@@ -106,14 +101,14 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 	return outColor;
 }
 
-__global__ void Render(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
+__global__ void Render(uchar4 *dst, const int imageW, const int imageH, const int sphereCount, const int lightCount, float gameTimer)
 {
 	//calculate pixel coordinates
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	auto color = GetColorOpt(imageW, imageH, x, y, gameTimer);
+	auto color = GetColorOpt(imageW, imageH, x, y, sphereCount, lightCount, gameTimer);
 	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
@@ -123,13 +118,26 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, float ga
 	}
 } 
 
-
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
+	const int sphereCount = 5;
+	Sphere spheresHost[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } },
+		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
+		{ { 0, -400, -1000}, 100.f, { 0, .4f, .9f } },
+		{ { 800, -600, -1200}, 100.f, { 0, .9f, .4f } },
+		{ { -800, -600, -1200}, 100.f, { .3f, .2f, .6f } } };
+	
+	const int lightCount = 2;
+	const float s = gameTimer / 2;
+	float3 lightsHost[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
+										{sinf(s + PI * 0.66f) * imageW * 2, -200, cosf(s + PI * 0.66f) * imageW * 2} };
+
+	cudaMemcpyToSymbol(spheres, spheresHost, sizeof(Sphere) * sphereCount);
+	cudaMemcpyToSymbol(lights, lightsHost, sizeof(float3) * lightCount);
+
+	//execute kernel
     dim3 threads(blockX, blockY);
     dim3 grid(iDivUp(imageW, blockX), iDivUp(imageH, blockY));
-
-	Render<<<grid, threads>>>(dst, imageW, imageH, gameTimer);
-
+	Render<<<grid, threads>>>(dst, imageW, imageH, sphereCount, lightCount, gameTimer);
     getLastCudaError("Raycasting kernel execution failed.\n");
 }
