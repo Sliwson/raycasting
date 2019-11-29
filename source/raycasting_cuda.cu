@@ -30,7 +30,7 @@ __device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, c
 
 	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
 	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
-	float3 cameraRayDirection = { rayx, rayy, -1 };
+	float3 cameraRayDirection = { rayx, rayy, -4 };
 	TranslatePoint(cameraRayDirection, cameraToWorld);
 	Normalize(cameraRayDirection);
 
@@ -118,19 +118,32 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH, const in
 	}
 } 
 
+void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, const int sphereCount, float timer)
+{
+	spheresH[0] = { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } };
+	spheresH[1] = { { -0.4, -0.4, -3 }, 0.1f, { .9f, .9f, 9.f } };
+	spheresH[2] = { { 0.4, -0.4, -3}, 0.1f, { 0, .4f, .9f } };
+	spheresH[3] = { { -0.6, -0.6, -3}, 0.1f, { 0, .9f, .4f } };
+	spheresH[4] = { { 0.6, -0.6, -3}, 0.1f, { .3f, .2f, .6f } };
+}
+
+void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const int lightCount, float timer)
+{
+	const float s = timer / 2.f;
+	lightsH[0] = { 0, sinf(s) * imageW * 2, cosf(s) * imageW * 2 };
+	lightsH[1] = { sinf(s + PI * 0.66f) * imageW * 2, -200, cosf(s + PI * 0.66f) * imageW * 2 }; 
+}
+
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
+	//create spheres and lights, copy them to gpu
 	const int sphereCount = 5;
-	Sphere spheresHost[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } },
-		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
-		{ { 0, -400, -1000}, 100.f, { 0, .4f, .9f } },
-		{ { 800, -600, -1200}, 100.f, { 0, .9f, .4f } },
-		{ { -800, -600, -1200}, 100.f, { .3f, .2f, .6f } } };
+	Sphere spheresHost[sphereCount];
+	ManipulateSpheres(spheresHost, imageW, imageH, sphereCount, gameTimer);
 	
 	const int lightCount = 2;
-	const float s = gameTimer / 2;
-	float3 lightsHost[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
-										{sinf(s + PI * 0.66f) * imageW * 2, -200, cosf(s + PI * 0.66f) * imageW * 2} };
+	float3 lightsHost[lightCount];
+	ManipulateLights(lightsHost, imageW, imageH, lightCount, gameTimer);
 
 	cudaMemcpyToSymbol(spheres, spheresHost, sizeof(Sphere) * sphereCount);
 	cudaMemcpyToSymbol(lights, lightsHost, sizeof(float3) * lightCount);
