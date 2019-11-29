@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "Geometry.h"
 #include "helper_cuda.h"
 #include "raycasting_kernel.h"
 #include "raycasting_kernel.cuh"
@@ -7,59 +6,115 @@
 namespace {
 constexpr int blockX = 16;
 constexpr int blockY = 16;
+constexpr auto PI = 3.14159265358979323846f;
 }
 
-__global__ void Render(uchar4 *dst, const int imageW, const int imageH)
+// device optimized code
+__device__ float3 GetColorOpt(const int imageW, const int imageH, const int x, const int y, float gameTimer)
+{
+	float cameraToWorld[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+	float scale = tan(PI / 4);
+	float imageAspectRatio = imageW / (float)imageH;
+
+	//getcamera ray
+	float3 cameraOrigin = { 0, 0, 0 };
+	TranslatePoint(cameraOrigin, cameraToWorld);
+
+	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
+	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
+	float3 cameraRayDirection = { rayx, rayy, -1 };
+	TranslatePoint(cameraRayDirection, cameraToWorld);
+	Normalize(cameraRayDirection);
+
+	//hardcoded constants
+	const int lightCount = 2;
+	float s = gameTimer / 2;
+	float3 lightPositions[lightCount] = { {0, sinf(s) * imageW * 2, cosf(s) * imageW * 2},
+										{sinf(s + PI * 0.66) * imageW * 2, -200, cosf(s + PI * 0.66) * imageW * 2} };
+
+	float3 outColor = { 110.f / 255, 193.f / 255, 248.f / 255 };
+	
+	const int sphereCount = 5;
+	Sphere spheres[sphereCount] = { { { 0, imageH / 11.f, -4 }, imageH / 11.f, { .0f, .9f, 0.4f } },
+		{ { -1000, -300, -1000 }, 100.f, { .9f, .9f, 9.f } },
+		{ { 0, -400, -1000}, 100.f, { 0, .4f, .9f } },
+		{ { 800, -600, -1200}, 100.f, { 0, .9f, .4f } },
+		{ { -800, -600, -1200}, 100.f, { .3f, .2f, .6f } } };
+	
+	float ka = 0.1;
+	float kd = 0.5;
+	float ks = 0.4;
+	int alpha = 32;
+
+	//found intersection with nearest sphere
+	float3 intersection = { 0, 0, 0 };
+	int iIntersected = -1;
+	float minDistance = FLT_MAX;
+
+	for (int s = 0; s < sphereCount; s++)
+	{
+		Sphere sphere = spheres[s];
+		float3 tempIntersection = { 0, 0, 0 };
+		bool result = Intersect(sphere.center, sphere.radius, cameraOrigin, cameraRayDirection, tempIntersection);
+		if (result) 
+		{
+			float3 diff = Subtract(tempIntersection, cameraOrigin);
+			float distance = LengthSquared(diff);
+			if (distance < minDistance)
+			{
+				minDistance = distance;
+				iIntersected = s;
+				intersection = tempIntersection;
+			}	
+		}
+	}
+
+	//calculate color
+	if (iIntersected > -1)
+	{
+		Sphere sphere = spheres[iIntersected];
+		float3 normal = Subtract(intersection, sphere.center);
+		Normalize(normal);
+		outColor = { 0, 0, 0 };
+
+		for (int i = 0; i < lightCount; i++)
+		{
+			float3 lightVector = Subtract(lightPositions[i], intersection);
+			Normalize(lightVector);
+
+			float3 r = Subtract(Multiply(normal, 2.f * Dot(lightVector, normal)), lightVector);
+			float3 viewVector = Subtract(cameraOrigin, intersection);
+			Normalize(viewVector);
+			
+			float d1 =  Dot(normal, lightVector);
+			if (d1 < 0)
+				d1 = 0;
+
+			float kdm = kd * d1;
+			
+			float d2 = Dot(r, viewVector);
+			if (d2 < 0)
+				d2 = 0;
+
+			float ksm = ks * pow(d2, alpha);
+			float multiplier = kdm + ksm;
+			outColor = Add(outColor, Multiply(sphere.color, multiplier));
+			outColor = Add(outColor, Multiply(sphere.color, ka));
+		}
+	}
+
+	return outColor;
+}
+
+__global__ void Render(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
 	//calculate pixel coordinates
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
 	const int pixel = y * imageW + x;
 
-	//calculate camera ray
-	Matrix4<float> cameraToWorld;
-	float scale = tan(PI / 4);
-	float imageAspectRatio = imageW / (float)imageH;
-	auto origin = cameraToWorld.Translate(Point3<float>());
-	float rayx = (2 * ((float)x + 0.5f) / (float)imageW - 1) * scale * imageAspectRatio;
-	float rayy = (1 - 2 * ((float)y + 0.5) / (float)imageH) * scale;
-	auto direction = cameraToWorld.Translate(Vector3<float>(rayx, rayy, -1));
-	direction.Normalize();
-	auto cameraRay = Ray<float>(origin, direction);
-
-	//hardcoded constants
-	auto light = Point3<float>(-200, -200, -200);
-	float3 color = { 110.f / 255, 193.f / 255, 248.f / 255 };
-	auto sphere = Sphere<float>(Point3<float>(0, imageH / 10, -4), imageH / 10);
-	float3 sphereColor = { .9f, .9f, 0.f };
-	float kd = 0.5;
-	float ks = 0.5;
-	int alpha = 10;
-
-	//intersection
-	Point3<float> intersection;
-	auto result = sphere.Intersect(cameraRay, &intersection);
-	if (result)
-	{
-		auto normal = Vector3<float>(intersection - sphere.C);
-		normal.Normalize();
-		auto lightVector = Vector3<float>(light - intersection);
-		lightVector.Normalize();
-
-		auto r =  normal * 2.f * Vector3<float>::Dot(lightVector, normal) - lightVector;
-		auto view = Vector3<float>(intersection - origin);
-		view.Normalize();
-
-		float kdm = kd * Vector3<float>::Dot(normal, lightVector);
-		float ksm = ks * pow(Vector3<float>::Dot(r, view), alpha);
-		float multiplier = kdm + ksm;
-
-		color.x = sphereColor.x * multiplier;
-		color.y = sphereColor.y * multiplier;
-		color.z = sphereColor.z * multiplier;
-	}
-
-	ClampColor(&color);
+	auto color = GetColorOpt(imageW, imageH, x, y, gameTimer);
+	ClampColor(color);
 	if (x < imageW && y < imageH)
 	{
 		dst[pixel].x = color.x * 255;
@@ -69,12 +124,12 @@ __global__ void Render(uchar4 *dst, const int imageW, const int imageH)
 } 
 
 
-void RenderScene(uchar4 *dst, const int imageW, const int imageH)
+void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
     dim3 threads(blockX, blockY);
     dim3 grid(iDivUp(imageW, blockX), iDivUp(imageH, blockY));
 
-	Render<<<grid, threads>>>(dst, imageW, imageH);
+	Render<<<grid, threads>>>(dst, imageW, imageH, gameTimer);
 
     getLastCudaError("Raycasting kernel execution failed.\n");
 }
