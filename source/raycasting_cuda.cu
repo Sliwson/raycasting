@@ -126,20 +126,20 @@ void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, con
 	const float A = 5.f;
 	const float B = 4.f;
 	const float sigma = PI / 4.f;
-	const float interval = PI / sphereCount;
+	const float interval = 4.f * PI / sphereCount;
 	timer /= 4.f;
 	
 	const auto x = [timer, A, sigma, sphereCount, interval](int i) {
-		return sin(A * timer + sigma + i * interval) * 0.6f;
+		return sin(A * timer + sigma + i * interval) * 0.6f * (1 + i / 20.f);
 	};
 
 	const auto y = [timer, B, sigma, sphereCount, interval](int i) {
-		return cos(B * timer + i * interval) / 4.f - 0.35f;
+		return cos(B * timer + i * interval) / 4.f - 0.35f * (1 + i / 10.f);
 	};
 
 	for (int i = 1; i < sphereCount; i++)
 	{
-		spheresH[i] = { { x(i), y(i), -2.f * i }, 0.1f, { .9f, .9f, 9.f } };
+		spheresH[i] = { { x(i), y(i), -2.f - 0.3f * i }, 0.1f, { .9f, .9f, 9.f } };
 	}
 }
 
@@ -153,7 +153,7 @@ void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
 	//create spheres and lights, copy them to gpu
-	const int sphereCount = 15;
+	const int sphereCount = 128;
 	Sphere spheresHost[sphereCount];
 	ManipulateSpheres(spheresHost, imageW, imageH, sphereCount, gameTimer);
 	
