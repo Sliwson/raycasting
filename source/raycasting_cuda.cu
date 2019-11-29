@@ -127,22 +127,22 @@ void ManipulateSpheres(Sphere* spheresH, const int imageW, const int imageH, con
 	const float A = 5.f;
 	const float B = 4.f;
 	const float sigma = PI / 4.f;
-	const float interval = 4.f * PI / sphereCount;
+	const float interval = 5.2f * PI / sphereCount;
 	timer /= 4.f;
 	
 	const auto x = [timer, A, sigma, sphereCount, interval](int i) {
-		return sin(A * timer + sigma + i * interval) * 0.6f * (1 + i / 20.f);
+		return sin(A * timer + sigma + i * interval) * 0.6f * (1 + i / 15.f);
 	};
 
 	const auto y = [timer, B, sigma, sphereCount, interval](int i) {
-		return cos(B * timer + i * interval) / 4.f - 0.35f * (1 + i / 10.f);
+		return cos(B * timer + i * interval) / 4.f - 0.35f * (1 + i / 7.f);
 	};
 
-	const int predefinedColors = 10;
+	const int predefinedColors = 4;
 	const float3 colors[predefinedColors] = {
 		{ .9f, .9f, .9f },
-		{ 0.f, .4f, .9f },
-		{ 0, .9f, .4f },
+		{ .2f, .4f, .9f },
+		{ .2f, .9f, .4f },
 		{ .3f, .2f, .6f } };
 
 	for (int i = 1; i < sphereCount; i++)
