@@ -10,11 +10,14 @@ constexpr int blockY = 16;
 constexpr auto PI = 3.14159265358979323846f;
 
 //spheres
-constexpr int maxSpheres = 1024;
+constexpr int maxSpheres = 2048;
 constexpr int maxLights = 128;
 
 __constant__ Sphere spheres[maxSpheres];
 __constant__ float3 lights[maxLights];
+
+float3 lightsHost[maxLights];
+Sphere spheresHost[maxSpheres];
 }
 
 // device optimized code
@@ -159,12 +162,10 @@ void ManipulateLights(float3* lightsH, const int imageW, const int imageH, const
 void RenderScene(uchar4 *dst, const int imageW, const int imageH, float gameTimer)
 {
 	//create spheres and lights, copy them to gpu
-	const int sphereCount = 512;
-	Sphere spheresHost[sphereCount];
+	const int sphereCount = 1024;
 	ManipulateSpheres(spheresHost, imageW, imageH, sphereCount, gameTimer);
 	
 	const int lightCount = 2;
-	float3 lightsHost[lightCount];
 	ManipulateLights(lightsHost, imageW, imageH, lightCount, gameTimer);
 
 	cudaMemcpyToSymbol(spheres, spheresHost, sizeof(Sphere) * sphereCount);
